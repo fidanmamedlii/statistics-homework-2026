@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive Bernoulli and Rademacher penetration-score simulator illustrating the Law of Large Numbers and Central Limit Theorem.">
+  <title>Homework 4 — Random Scores, LLN &amp; CLT</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .plot-panel{background:#fff;border:1px solid var(--line);border-radius:5px;padding:18px;margin:16px 0;min-width:0}.plot-panel h3{margin:0 0 8px}.plot-panel canvas{display:block;width:100%;height:300px}.plot-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}.plot-grid .plot-panel{margin:0}.hw4-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:18px 0}.hw4-controls .field{min-width:125px}.hw4-controls input,.hw4-controls select{width:100%}.stat-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}.stat-strip .stat-card{min-width:0}.stat-strip strong{overflow-wrap:anywhere}.formula-row{overflow-x:auto}.prob-table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0}.prob-table th,.prob-table td{padding:9px 10px;border:1px solid var(--line);text-align:left;vertical-align:top}.prob-table th{background:#eff5f0;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase}.prob-table td:first-child{font-weight:700}.model-card{background:#fff;border:1px solid var(--line);border-radius:5px;padding:18px;min-width:0}.model-card h3{margin:0 0 10px}.model-card p{font-size:13px}.chart-caption{font-size:12px!important;color:var(--muted)!important}.callout.warn{background:#fff1e8;color:#65402e;border-left:3px solid #d87a51;border-radius:3px;padding:13px 15px}.legend-inline{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted)}.legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#16806d;margin-right:5px}.legend-dot.orange{background:#e98950}.legend-dot.purple{background:#8068a8}.result-status{min-height:24px;color:var(--teal-deep);font-weight:600}.result-status.error{color:#a33c27}.metric-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}.source-list a{overflow-wrap:anywhere}
+    @media(max-width:760px){.plot-grid{grid-template-columns:1fr}.plot-panel{padding:12px}.plot-panel canvas{height:260px}.stat-strip{grid-template-columns:1fr}.prob-table{min-width:620px}.site-header{flex-wrap:wrap}.site-header nav{flex-wrap:wrap}}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark">∑</span><span>CRYPTOGRAPHY <i>&amp;</i> STATISTICS</span></a>
+    <nav aria-label="Homework navigation"><a href="homework-1.html">Homework 01</a><a href="homework-2.html">Homework 02</a><a href="homework-3.html">Homework 03</a><a href="homework-4.html" aria-current="page">LLN &amp; CLT</a></nav>
+  </header>
+  <main>
+    <section class="page-intro">
+      <div class="crumb"><a href="index.html">HOME</a> / PENETRATION SCORE · PROBABILITY</div>
+      <p class="eyebrow">HOMEWORK 04 · STOCHASTIC PROCESSES · LLN + CLT</p>
+      <h1>Many attackers.<br>Many small steps.</h1>
+      <p class="lead">Give each attacker one score change per system. Add the changes. Then see what happens to the total, the per-system average, and the square-root-scaled total as the network grows.</p>
+    </section>
+
+    <section class="section">
+      <p class="kicker">THE STORY · WHAT ARE n AND m?</p>
+      <h2>A score is just a running tally</h2>
+      <p>Imagine there are <strong>n systems</strong> to inspect. An attacker visits each system once. The visit adds a random amount to that attacker's penetration score. One attacker makes one length-n path. With <strong>m attackers</strong>, we simulate m independent paths; they let us see a distribution instead of just one lucky or unlucky outcome.</p>
+      <p>At step i, the change is X<sub>i</sub>. For attacker j, the running score after k systems is S<sub>k</sub><sup>(j)</sup> = X<sub>1</sub><sup>(j)</sup> + ··· + X<sub>k</sub><sup>(j)</sup>. Each step and each attacker's path uses independent draws from the selected model. These scores are a simplified mathematical model, not a claim that real intrusions are independent or have these exact probabilities.</p>
+      <div class="callout teal"><strong>Two separate knobs:</strong> increase n to give every attacker more system visits; increase m to simulate more attackers. Increasing n changes the distribution of each person's score. Increasing m gives a better view of that distribution and makes the whole group's average more stable.</div>
+    </section>
+
+    <section class="section" id="simulator">
+      <p class="kicker">INTERACTIVE EXPERIMENT</p>
+      <h2>Choose the network and run the attackers</h2>
+      <p>Use the same number of systems and attackers in both models. Change the random seed and press Run again to make a new repeatable experiment.</p>
+      <div class="hw4-controls">
+        <div class="field"><label for="systems">Systems n</label><input id="systems" type="number" min="1" max="5000" value="100"></div>
+        <div class="field"><label for="attackers">Attackers m</label><input id="attackers" type="number" min="1" max="2000" value="500"></div>
+        <div class="field"><label for="probability">Bernoulli success chance p</label><input id="probability" type="number" min="0" max="1" step="0.01" value="0.3"></div>
+        <div class="field"><label for="seed">Random seed</label><input id="seed" type="number" min="1" max="4294967295" step="1" value="20261028"></div>
+        <button class="button-small" id="run-simulation">Run simulation</button>
+        <button class="button-small secondary" id="download-csv" disabled>Download outcomes CSV</button>
+      </div>
+      <p class="mini-note">The demo limits n × m to 5 million draws per model so it remains responsive. The displayed paths are only the first 12 attackers; the distribution and statistics use all m attackers.</p>
+      <p id="run-status" class="result-status" role="status" aria-live="polite">Ready. Press “Run simulation”.</p>
+      <div class="metric-controls"><label for="quantity"><strong>Distribution shown in histograms</strong></label><select id="quantity"><option value="total">Total Sₙ</option><option value="average">Average Sₙ/n</option><option value="sqrt">Normalized total Sₙ/√n</option></select><span class="mini-note">Bars show simulated attackers; the line marks the theoretical mean.</span></div>
+      <div class="plot-grid">
+        <article class="plot-panel"><h3>Bernoulli model · Xᵢ is 0 or 1</h3><p class="chart-caption">A step scores 1 with probability p, otherwise 0. The average should settle near p.</p><canvas id="bernoulli-paths" aria-label="Bernoulli sample attacker trajectories" role="img"></canvas><div id="bernoulli-path-legend" class="legend-inline"></div></article>
+        <article class="plot-panel"><h3>Rademacher model · Xᵢ is −1 or +1</h3><p class="chart-caption">A fair step adds +1 or −1. The positive and negative changes balance over time.</p><canvas id="rademacher-paths" aria-label="Rademacher sample attacker trajectories" role="img"></canvas><div id="rademacher-path-legend" class="legend-inline"></div></article>
+      </div>
+      <div class="plot-grid">
+        <article class="plot-panel"><h3>Distribution across attackers · Bernoulli</h3><canvas id="bernoulli-hist" aria-label="Histogram of the selected Bernoulli score quantity" role="img"></canvas><p id="bernoulli-summary" class="chart-caption"></p></article>
+        <article class="plot-panel"><h3>Distribution across attackers · Rademacher</h3><canvas id="rademacher-hist" aria-label="Histogram of the selected Rademacher score quantity" role="img"></canvas><p id="rademacher-summary" class="chart-caption"></p></article>
+      </div>
+      <div class="plot-grid">
+        <article class="plot-panel"><h3>CLT check · standardized Bernoulli total</h3><p class="chart-caption">When 0 &lt; p &lt; 1, center by np and divide by √(np(1−p)). The normal curve is N(0,1).</p><canvas id="bernoulli-clt" aria-label="Standardized Bernoulli totals compared with a normal curve" role="img"></canvas><p id="bernoulli-clt-note" class="chart-caption"></p></article>
+        <article class="plot-panel"><h3>CLT check · Rademacher total divided by √n</h3><p class="chart-caption">Theoretical mean 0 and variance 1 for every n. As n grows, its discrete distribution resembles N(0,1).</p><canvas id="rademacher-clt" aria-label="Normalized Rademacher totals compared with a normal curve" role="img"></canvas><p id="rademacher-clt-note" class="chart-caption"></p></article>
+      </div>
+      <h3>Predicted and observed values for one attacker</h3>
+      <div class="table-wrap"><table class="prob-table"><thead><tr><th>Model</th><th>Quantity</th><th>Theoretical mean</th><th>Theoretical variance</th><th>Simulated mean</th><th>Simulated variance</th></tr></thead><tbody id="moment-rows"></tbody></table></div>
+      <div class="plot-grid">
+        <article class="model-card"><h3>Does the average settle down?</h3><p>We mark an attacker as “near the model mean” when |Sₙ/n − μ| &lt; 0.1. This fraction should generally improve as n grows, though finite random samples can wobble. The last column is Chebyshev’s upper bound, clipped at 100%.</p><div class="table-wrap"><table class="prob-table"><thead><tr><th>Model</th><th>Expected μ</th><th>Attackers within 0.1</th><th>Chebyshev upper bound</th></tr></thead><tbody id="lln-rows"></tbody></table></div></article>
+        <article class="model-card"><h3>How much do all m attackers add up to?</h3><p>Let T = sum of every attacker's score across all n systems. The table shows the predicted group total, its average per visit, and total scaled by √(mn). A bigger m gives more total scores, while the per-visit average becomes steadier.</p><div class="table-wrap"><table class="prob-table"><thead><tr><th>Model</th><th>E[T] · Var(T)</th><th>E[T/(mn)] · Var</th><th>E[T/√(mn)] · Var</th></tr></thead><tbody id="group-rows"></tbody></table></div></article>
+      </div>
+      <h3>Repeat the experiment at increasing system sizes</h3>
+      <p>For this seeded sweep, each attacker keeps the same random path as we extend the system size: the shorter paths are prefixes of the longest one. At each n, all m attackers are measured again. Only sizes that are no larger than your selected n appear.</p>
+      <div class="plot-grid">
+        <article class="plot-panel"><h3>Variance of the per-system average</h3><p class="chart-caption">Observed lines use m paths; dashed theoretical lines are σ²/n.</p><canvas id="sweep-variance" aria-label="Empirical and theoretical variance of average score as systems increase" role="img"></canvas><div id="sweep-variance-legend" class="legend-inline"></div></article>
+        <article class="plot-panel"><h3>Attackers close to the expected average</h3><p class="chart-caption">Solid lines show the observed fraction within 0.1. Dashed lines show Chebyshev’s upper bound.</p><canvas id="sweep-lln" aria-label="LLN convergence fraction and Chebyshev bound as systems increase" role="img"></canvas><div id="sweep-lln-legend" class="legend-inline"></div></article>
+      </div>
+      <div class="table-wrap"><table class="prob-table"><thead><tr><th>n systems</th><th>Model</th><th>Variance of average · predicted</th><th>Variance of average · observed</th><th>Within 0.1 · observed</th><th>Chebyshev upper bound</th></tr></thead><tbody id="sweep-rows"></tbody></table></div>
+    </section>
+
+    <section class="section" id="theory">
+      <p class="kicker">WHAT THE MATH PREDICTS</p>
+      <h2>Three ways to look at the same score</h2>
+      <p>The <strong>total</strong> grows with the number of steps. The <strong>average</strong> divides that growing total by n. The <strong>normalized total</strong> divides by √n, which is the scale of typical random fluctuations around the mean.</p>
+      <div class="table-wrap"><table class="prob-table"><thead><tr><th>Model</th><th>Increment</th><th>Sₙ: mean, variance</th><th>Sₙ/n: mean, variance</th><th>Sₙ/√n: mean, variance</th><th>Limit idea</th></tr></thead><tbody>
+        <tr><td>Bernoulli</td><td>1 with probability p; else 0</td><td>np; np(1−p)</td><td>p; p(1−p)/n</td><td>p√n; p(1−p)</td><td>The average converges to p. Uncentered Sₙ/√n does not approach a fixed distribution for p&gt;0; it drifts right. The CLT centers first: (Sₙ−np)/√(np(1−p)) → N(0,1), for 0&lt;p&lt;1.</td></tr>
+        <tr><td>Rademacher</td><td>+1 or −1, each with probability 1/2</td><td>0; n</td><td>0; 1/n</td><td>0; 1</td><td>The average converges in probability to 0. By the CLT, Sₙ/√n → N(0,1). At each finite n, only discrete values of the same parity as n occur.</td></tr>
+      </tbody></table></div>
+      <div class="callout teal"><strong>Law of Large Numbers (LLN):</strong> if independent steps have the same mean μ and finite variance σ², then Sₙ/n gets close to μ with probability approaching 1. Chebyshev gives P(|Sₙ/n−μ| ≥ ε) ≤ σ²/(nε²), which shrinks as n grows.</div>
+      <div class="callout teal"><strong>Central Limit Theorem (CLT):</strong> after subtracting the expected total and dividing by its standard deviation, a sum of many independent, identically distributed steps with finite, nonzero variance becomes approximately standard normal. For the symmetric Rademacher model that is exactly Sₙ/√n. Bernoulli needs centering by np as well as scaling.</div>
+      <p>“Variance” is a measure of spread, the expected squared distance from the mean. Dividing a variable by n divides its variance by n²; dividing it by √n divides variance by n. A variance of 1 for Sₙ/√n says its typical spread remains visible while its distribution shape approaches a bell curve. The CLT describes the distribution across repeated attackers, not what any one specific attack must do.</p>
+    </section>
+
+    <section class="section">
+      <p class="kicker">READING THE SIMULATED NETWORK</p>
+      <h2>System size controls path length; attacker count controls repetition</h2>
+      <div class="table-wrap"><table class="prob-table"><thead><tr><th>Change</th><th>Per-attacker effect</th><th>Effect on the group of m attackers</th></tr></thead><tbody>
+        <tr><td>More systems n</td><td>More steps let positive and negative Rademacher increments cancel; Sₙ typically has size √n, but its average shrinks in spread like 1/√n. Bernoulli total grows near np and average settles near p.</td><td>There are mn visits overall. The pooled average has variance σ²/(mn), so it is more stable.</td></tr>
+        <tr><td>More attackers m</td><td>It does not change the mathematical path of a fixed attacker.</td><td>Provides more independent observations, so the histogram and empirical moments better describe the model. The group sum's variance is m times the one-attacker variance; the group average's variance falls by a factor m. Rademacher T/√(mn) stays at variance 1.</td></tr>
+      </tbody></table></div>
+      <p class="callout warn"><strong>Model limitations:</strong> real attackers do not necessarily act independently, visit every system once, or have equal success probabilities. Defenders change attacker behavior; systems differ; incidents cluster. Bernoulli and Rademacher scores are deliberately simple tools for understanding sums, averages, variance, the LLN, and the CLT—not a real breach forecast.</p>
+    </section>
+
+    <section class="section" id="coverage">
+      <p class="kicker">ASSIGNMENT CHECKLIST</p>
+      <h2>Everything requested is covered</h2>
+      <ul><li>Both Bernoulli(p) and symmetric Rademacher(±1) models.</li><li>Increasing system counts n and a selectable number m of independent attackers / sample trajectories.</li><li>Sample paths and distributions of Sₙ, Sₙ/n, and Sₙ/√n, plus theoretical and simulated means and variances.</li><li>LLN convergence in probability with a stated tolerance and Chebyshev upper bound.</li><li>Rademacher CLT comparison with the standard normal and correct centering/scaling note for Bernoulli.</li><li>Interpretation of n and m in system/attacker terms, with assumptions and limitations stated.</li></ul>
+    </section>
+  </main>
+  <footer><span>CRYPTOGRAPHY &amp; STATISTICS</span><span>Homework 04 · Simulation uses a repeatable random seed</span></footer>
+  <script src="homework-4-core.js"></script>
+  <script src="homework-4.js"></script>
+</body>
+</html>
