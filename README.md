@@ -1,11 +1,12 @@
 # Cryptography & Statistics Homework
 
-This buildless static site contains four educational assignments:
+This buildless static site contains five educational assignments:
 
 - `homework-1.html` and `homework-1.js` — interactive elliptic-curve multiplication on the toy curve y² = x³ + 7 (mod 17), with point trace, optional animation, and a small descriptive statistical interpretation.
 - `homework-2.html` — sourced explanation of the mnemonic-to-Ethereum-address pipeline and the different purposes of its standards and primitives.
 - `homework-3.html` — complete encryption and statistical cryptanalysis assignment, including both optional discussions and working alternative methods. Its scripts are `homework-3-core.js` (algorithms), `homework-3-data.js` (separate original training/test texts), and `homework-3.js` (interface).
 - `homework-4.html` — interactive Bernoulli/Rademacher penetration-score experiment with multiple systems and attackers, empirical distributions, LLN checks, and CLT comparisons. Its scripts are `homework-4-core.js` (simulation) and `homework-4.js` (interface and charts).
+- `homework-5.html` — Welford’s mean and sample-variance recurrence plus an interactive sampling experiment. Its scripts are `homework-5-core.js` and `homework-5.js`.
 
 The mod-17 curve and restricted secp256k1 key range are intentionally insecure teaching examples and must not be used to protect assets. The demos run in the browser; no mnemonic or real wallet secret is collected or processed. Homework 03 uses the browser's built-in Web Crypto API and no external JavaScript packages.
 
@@ -29,6 +30,14 @@ The experiment treats `m` attackers as independent sample paths, each with one r
 The Bernoulli CLT requires centering by `np` before division by `sqrt(np(1-p))`. Its uncentered `S_n/sqrt(n)` drifts when `p>0`. The fair Rademacher model is already zero-mean, so `S_n/sqrt(n)` is the CLT quantity. The page states the independent/equal-probability model assumptions and their limits as a realistic cyber-risk forecast.
 
 The page also runs a seeded increasing-n sweep up to the selected network size. Each attacker keeps a nested path as n increases; the line charts and table compare the variance of averages, the observed LLN closeness fraction, and Chebyshev's bound. [HW4-REPORT.md](HW4-REPORT.md) gives the formulas, assumptions, sample run, and coverage.
+
+## Homework 5
+
+The new page derives Welford’s running mean and M2 recurrences, then simulates a uniform discrete score from 0 through 10. Each hacker receives n scores. The page computes each hacker’s sample mean and unbiased sample variance, compares their averages with the theoretical mean 5 and variance 10, and plots the observed and theoretical spread as n increases. It includes histograms, a comparison table, and CSV download.
+
+The derivation, distribution calculations, statistical interpretation, and limitations are documented in HW5-REPORT.md.
+
+The public page is [Homework 5](https://fidanmamedlii.github.io/statistics-homework-2026/homework-5.html).
 
 ## Verification
 

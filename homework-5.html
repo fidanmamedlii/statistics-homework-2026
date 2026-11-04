@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Derive Welford's online mean and variance updates, then study sampling estimates with a reproducible simulation.">
+  <title>Homework 5 — Welford, Sampling Mean &amp; Variance</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .hw5-hero{padding:48px 0 32px;border-bottom:1px solid var(--line)}
+    .hw5-hero h1{font-size:clamp(38px,5.6vw,64px);margin:10px 0 15px}
+    .jump-links{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0}
+    .jump-links a{padding:6px 10px;border:1px solid var(--line);border-radius:20px;text-decoration:none;font-size:12px;color:var(--teal-deep);background:#fff}
+    .formula-card{background:#eff5f0;border-left:3px solid var(--teal-deep);padding:14px 16px;margin:14px 0;border-radius:3px;overflow-wrap:anywhere}
+    .formula-card code,.code-card code{font-family:var(--mono);font-size:13px}
+    .code-card{background:#172b28;color:#edf6f1;border-radius:4px;padding:16px;overflow:auto}
+    .code-card pre{margin:0;white-space:pre;line-height:1.7}
+    .math-steps{counter-reset:step;list-style:none;padding:0}
+    .math-steps li{counter-increment:step;position:relative;padding:0 0 15px 42px}
+    .math-steps li:before{content:counter(step);position:absolute;left:0;top:0;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#e5f4ee;color:var(--teal-deep);font:12px var(--mono)}
+    .hw5-controls{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:18px 0}
+    .hw5-controls .field{min-width:130px}
+    .hw5-controls input{width:100%}
+    .status-line{min-height:24px;color:var(--teal-deep);font-size:13px;font-weight:600}
+    .status-line.error{color:#a33c27}
+    .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
+    .metric-card{padding:14px;background:#fff;border:1px solid var(--line);border-radius:4px;min-width:0}
+    .metric-card span{display:block;color:var(--muted);font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase}
+    .metric-card strong{display:block;font:600 22px var(--display);margin:5px 0;overflow-wrap:anywhere}
+    .metric-card small{font-size:11px;color:var(--muted)}
+    .hw5-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:16px 0}
+    .hw5-plot{background:#fff;border:1px solid var(--line);border-radius:5px;padding:15px;min-width:0}
+    .hw5-plot h3{font-size:18px;margin:0 0 7px}
+    .hw5-plot p{font-size:12px;color:var(--muted);margin:0 0 10px}
+    .hw5-plot canvas{width:100%;height:280px;display:block}
+    .table-wrap{overflow:auto}
+    .hw5-table{width:100%;border-collapse:collapse;font-size:12px}
+    .hw5-table th,.hw5-table td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+    .hw5-table th{font:10px var(--mono);background:#f4f7f3;letter-spacing:.04em}
+    .hw5-table tr:last-child td{border-bottom:0}
+    .hw5-note{font-size:12px!important;color:var(--muted)!important}
+    .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:5px;color:var(--muted);font-size:11px}
+    .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:#16806d}
+    .legend i.orange{background:#e98950}
+    .legend i.dashed{height:2px;border-radius:0;background:#283d38}
+    .theory-table{min-width:680px}
+    .hw5-coverage li{margin:5px 0}
+    @media(max-width:850px){.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hw5-grid{grid-template-columns:1fr}}
+    @media(max-width:560px){.metric-grid{grid-template-columns:1fr}.hw5-plot{padding:11px}.hw5-plot canvas{height:250px}}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark">∑</span><span>CRYPTOGRAPHY <i>&amp;</i> STATISTICS</span></a>
+    <nav aria-label="Homework navigation"><a href="homework-1.html">Homework 01</a><a href="homework-2.html">Homework 02</a><a href="homework-3.html">Homework 03</a><a href="homework-4.html">Homework 04</a><a href="homework-5.html" aria-current="page">Homework 05</a></nav>
+  </header>
+  <main>
+    <section class="hw5-hero">
+      <div class="crumb"><a href="index.html">HOME</a> / ONLINE STATISTICS · WELFORD</div>
+      <p class="eyebrow">HOMEWORK 05 · RUNNING ESTIMATES</p>
+      <h1>Update the estimate<br>as each score arrives.</h1>
+      <p class="lead">Derive Welford’s recurrence for the mean and sum of squared deviations. Then use it to compare each hacker’s sample mean and sample variance with a known score distribution.</p>
+      <nav class="jump-links" aria-label="Homework 5 sections"><a href="#welford">Exercise 1 · Welford’s formulas</a><a href="#simulation">Exercise 2 · Simulation</a><a href="#interpretation">What the results mean</a><a href="#coverage">Task checklist</a></nav>
+    </section>
+
+    <section class="section" id="welford">
+      <p class="kicker">EXERCISE 1 · DERIVE THE UPDATE</p>
+      <h2>Keep a running mean and a running sum of squares</h2>
+      <p>Suppose we already saw <strong>n − 1</strong> scores. Their mean is <strong>mean<sub>old</sub></strong>, and their sum of squared distances from that mean is <strong>M2<sub>old</sub></strong>. Now a new score <strong>x<sub>n</sub></strong> arrives. We want to update our answers without going back through all earlier scores.</p>
+
+      <ol class="math-steps">
+        <li><strong>Measure how far the new score is from the old mean.</strong><div class="formula-card"><code>delta = x<sub>n</sub> − mean<sub>old</sub></code></div></li>
+        <li><strong>Move the mean partway toward the new score.</strong> After n scores, the new mean changes by delta divided by n.<div class="formula-card"><code>mean<sub>new</sub> = mean<sub>old</sub> + delta / n</code></div></li>
+        <li><strong>Measure the new score’s distance from the new mean.</strong><div class="formula-card"><code>delta2 = x<sub>n</sub> − mean<sub>new</sub></code></div></li>
+        <li><strong>Add the new score’s contribution to M2.</strong> The update is the old-to-new distance times the new-to-new-mean distance.<div class="formula-card"><code>M2<sub>new</sub> = M2<sub>old</sub> + delta × delta2</code></div></li>
+      </ol>
+
+      <div class="callout teal"><strong>Why does the M2 update work?</strong> Moving the mean changes the distances of all old scores a little. Their total change, together with the new score’s squared distance, simplifies to <code>delta × delta2</code>. So we can update the total without storing or re-reading the old scores.</div>
+
+      <h3>The three recurrence lines</h3>
+      <p>The loop already knows the new count n. It first calculates delta using the old mean, then updates the mean, then uses the updated mean in the M2 line:</p>
+      <div class="code-card"><pre><code>delta = x - mean
+mean += delta / n
+M2 += delta * (x - mean)</code></pre></div>
+      <p>The practical loop also increments the count. Start with <code>count = 0</code>, <code>mean = 0</code>, and <code>M2 = 0</code>.</p>
+
+      <h3>How do we get variance?</h3>
+      <p><code>M2</code> is the sum of squared distances from the current mean. For the usual <strong>sample variance</strong>, divide by n − 1:</p>
+      <div class="formula-card"><code>sample variance s² = M2 / (n − 1), for n ≥ 2</code></div>
+      <p>Dividing by n instead gives the population variance of the values already observed. This homework uses <code>M2 / (n − 1)</code> for each hacker, because each hacker’s scores are treated as a sample from the chosen score distribution.</p>
+    </section>
+
+    <section class="section" id="simulation">
+      <p class="kicker">EXERCISE 2 · CHOOSE A DISTRIBUTION</p>
+      <h2>Each system gives a score from 0 through 10</h2>
+      <p>For this experiment, every system score is chosen uniformly from the eleven whole numbers <strong>0, 1, 2, …, 10</strong>. “Uniformly” means every number has the same chance: 1 out of 11.</p>
+      <div class="formula-card"><strong>Theoretical mean:</strong> μ = (0 + 1 + ··· + 10) / 11 = <strong>5</strong><br><strong>Theoretical variance:</strong> σ² = [Σ(x − 5)²] / 11 = 110 / 11 = <strong>10</strong></div>
+      <p>Each hacker gets n scores. Welford’s update computes that hacker’s mean and sample variance as the scores arrive. We repeat this for m independent hackers, then average the m sample means and the m sample variances.</p>
+
+      <div class="hw5-controls">
+        <div class="field"><label for="systems">Systems per hacker (n)</label><input id="systems" type="number" min="2" max="5000" value="100"></div>
+        <div class="field"><label for="hackers">Hackers (m)</label><input id="hackers" type="number" min="2" max="2000" value="500"></div>
+        <div class="field"><label for="seed">Random seed</label><input id="seed" type="number" min="1" max="4294967295" value="20261104"></div>
+        <button class="button-small" id="run">Run simulation</button>
+        <button class="button-small secondary" id="download" disabled>Download CSV</button>
+      </div>
+      <p class="hw5-note">The simulation uses the same score rule for every hacker. For a fair comparison across n, a hacker’s shorter run is the beginning of that same hacker’s longer run. At least 2 systems are needed to calculate sample variance.</p>
+      <p id="status" class="status-line" role="status" aria-live="polite">Ready. Press “Run simulation”.</p>
+
+      <div class="metric-grid" aria-live="polite">
+        <article class="metric-card"><span>Average of hackers’ sample means</span><strong id="avg-means">—</strong><small>Theory: μ = 5</small></article>
+        <article class="metric-card"><span>Average of hackers’ sample variances</span><strong id="avg-variances">—</strong><small>Theory: σ² = 10</small></article>
+        <article class="metric-card"><span>Spread of sample means across hackers</span><strong id="mean-spread">—</strong><small id="mean-spread-note">Observed SD / theory</small></article>
+        <article class="metric-card"><span>Spread of sample variances across hackers</span><strong id="variance-spread">—</strong><small id="variance-spread-note">Observed SD / theory</small></article>
+      </div>
+
+      <div class="hw5-grid">
+        <article class="hw5-plot"><h3>Each hacker’s sample mean</h3><p>Each bar counts hackers whose mean fell in that range. The vertical line marks the theoretical mean μ = 5.</p><canvas id="means-chart" role="img" aria-label="Histogram of the sample means across hackers"></canvas><div class="legend"><span><i></i>Hacker counts</span><span><i class="orange"></i>Theoretical mean</span></div></article>
+        <article class="hw5-plot"><h3>Each hacker’s sample variance</h3><p>Each bar counts hackers whose sample variance fell in that range. The vertical line marks the theoretical variance σ² = 10.</p><canvas id="variances-chart" role="img" aria-label="Histogram of the sample variances across hackers"></canvas><div class="legend"><span><i></i>Hacker counts</span><span><i class="orange"></i>Theoretical variance</span></div></article>
+      </div>
+
+      <h3>See individual hackers</h3>
+      <p class="hw5-note">The first ten rows are examples from this run. The CSV button downloads the result for all m hackers.</p>
+      <div class="table-wrap"><table class="hw5-table"><thead><tr><th>Hacker</th><th>Number of scores</th><th>Sample mean</th><th>Sample variance</th></tr></thead><tbody id="hacker-rows"><tr><td colspan="4">Run the simulation to see example results.</td></tr></tbody></table></div>
+
+      <h3>Repeat the experiment for different n</h3>
+      <p>These lines show how spread out the individual hackers’ estimates are. A smaller standard deviation means their estimates are clustered more tightly.</p>
+      <div class="hw5-grid">
+        <article class="hw5-plot"><h3>Spread of sample means</h3><p>Solid: observed across simulated hackers. Dashed: theoretical SD, √(10/n).</p><canvas id="mean-sweep" role="img" aria-label="Observed and theoretical spread of sample means for increasing system counts"></canvas><div class="legend"><span><i></i>Observed</span><span><i class="orange"></i>Theoretical</span></div></article>
+        <article class="hw5-plot"><h3>Spread of sample variances</h3><p>Solid: observed across simulated hackers. Dashed: theoretical SD for this uniform distribution.</p><canvas id="variance-sweep" role="img" aria-label="Observed and theoretical spread of sample variances for increasing system counts"></canvas><div class="legend"><span><i></i>Observed</span><span><i class="orange"></i>Theoretical</span></div></article>
+      </div>
+      <div class="table-wrap"><table class="hw5-table"><thead><tr><th>Systems n</th><th>Average sample mean (target 5)</th><th>Mean estimate SD observed</th><th>Mean estimate SD theory</th><th>Average sample variance (target 10)</th><th>Variance estimate SD observed</th><th>Variance estimate SD theory</th></tr></thead><tbody id="sweep-rows"><tr><td colspan="7">Run the simulation to compare different values of n.</td></tr></tbody></table></div>
+    </section>
+
+    <section class="section" id="interpretation">
+      <p class="kicker">HOW TO READ THE RESULTS</p>
+      <h2>What should happen as n grows?</h2>
+      <ul>
+        <li>The average of the hackers’ sample means should be near μ = 5. It estimates the true average score.</li>
+        <li>The average of the hackers’ sample variances should be near σ² = 10. The denominator n − 1 makes each sample variance unbiased on average.</li>
+        <li>Individual sample means should cluster more tightly around 5 as n increases. Their theoretical variance is 10/n, so their theoretical standard deviation is √(10/n).</li>
+        <li>Individual sample variances should also become less spread out as n increases. They may still differ noticeably when n is small.</li>
+      </ul>
+      <div class="formula-card"><strong>Across m hackers:</strong> the average of their sample means has expected value 5 and standard error √(10/(mn)). The average of their sample variances has expected value 10; more hackers make its average steadier too.</div>
+      <p>These comparisons are useful in <strong>inferential statistics</strong>. In a real study, we often cannot measure an entire population. We take samples, calculate a sample mean and variance, then use those sample statistics to learn about the larger population. Welford’s method is useful when data arrives one item at a time: it updates the estimates without keeping every old score in memory.</p>
+
+      <details>
+        <summary>Why does the sample variance estimate also become less variable?</summary>
+        <p>For a sample of size n, the variance of its unbiased sample variance is [μ₄ − ((n − 3)/(n − 1))σ⁴] / n, where μ₄ is the distribution’s fourth central moment. For scores uniformly chosen from 0 through 10, μ₄ = 178 and σ⁴ = 100. This gives a theoretical guide for the dashed line in the sample-variance spread chart. The formula is more advanced than the Welford update; it helps predict how much the sample-variance estimates themselves fluctuate.</p>
+      </details>
+      <p class="callout warn"><strong>Remember:</strong> one run will not match 5 and 10 exactly. The seed gives a repeatable random run. A different seed gives another run. The simulation illustrates estimates and their variability; it does not describe real hackers’ scores.</p>
+    </section>
+
+    <section class="section" id="coverage">
+      <p class="kicker">ASSIGNMENT CHECKLIST</p>
+      <h2>Both exercises are covered</h2>
+      <ul class="hw5-coverage">
+        <li>Derives Welford’s mean update and the recurrence for M2, the sum of squared deviations.</li>
+        <li>Shows the three-line recurrence and code for sample variance.</li>
+        <li>Chooses a fixed distribution on scores 0 through 10 and derives its theoretical mean and variance.</li>
+        <li>Simulates m hackers, each with n scores, and computes each hacker’s sample mean and sample variance.</li>
+        <li>Compares the averages of sample estimates to theoretical μ and σ².</li>
+        <li>Repeats the experiment at increasing n and measures how the estimates’ variability changes.</li>
+        <li>Explains why sample estimates are useful for learning about an unknown population.</li>
+      </ul>
+    </section>
+  </main>
+  <footer><span>CRYPTOGRAPHY &amp; STATISTICS</span><span>Homework 05 · Welford and sampling estimates</span></footer>
+  <script src="homework-5-core.js"></script>
+  <script src="homework-5.js"></script>
+</body>
+</html>
