@@ -1,12 +1,13 @@
 # Cryptography & Statistics Homework
 
-This buildless static site contains five educational assignments:
+This buildless static site contains six interactive learning pages. The first two pages are the two exercises under the course’s first homework; consequently, the sixth site page corresponds to course Homework 5:
 
 - `homework-1.html` and `homework-1.js` — interactive elliptic-curve multiplication on the toy curve y² = x³ + 7 (mod 17), with point trace, optional animation, and a small descriptive statistical interpretation.
 - `homework-2.html` — sourced explanation of the mnemonic-to-Ethereum-address pipeline and the different purposes of its standards and primitives.
 - `homework-3.html` — complete encryption and statistical cryptanalysis assignment, including both optional discussions and working alternative methods. Its scripts are `homework-3-core.js` (algorithms), `homework-3-data.js` (separate original training/test texts), and `homework-3.js` (interface).
 - `homework-4.html` — interactive Bernoulli/Rademacher penetration-score experiment with multiple systems and attackers, empirical distributions, LLN checks, and CLT comparisons. Its scripts are `homework-4-core.js` (simulation) and `homework-4.js` (interface and charts).
 - `homework-5.html` — Welford’s mean and sample-variance recurrence plus an interactive sampling experiment. Its scripts are `homework-5-core.js` and `homework-5.js`.
+- `homework-6.html` — course Homework 5: Riemann and Lebesgue-inspired numerical integration, pathological examples, and standard-normal CDF methods. Its script is `homework-6.js`.
 
 The mod-17 curve and restricted secp256k1 key range are intentionally insecure teaching examples and must not be used to protect assets. The demos run in the browser; no mnemonic or real wallet secret is collected or processed. Homework 03 uses the browser's built-in Web Crypto API and no external JavaScript packages.
 
@@ -38,6 +39,14 @@ The new page derives Welford’s running mean and M2 recurrences, then simulates
 The derivation, distribution calculations, statistical interpretation, and limitations are documented in HW5-REPORT.md.
 
 The public page is [Homework 5](https://fidanmamedlii.github.io/statistics-homework-2026/homework-5.html).
+
+## Course Homework 5: Integration and the normal CDF
+
+The sixth site page covers the course's fifth homework because course Homework 1 is split across site pages 1 and 2. Exercise 1 compares midpoint Riemann sums with a finite range-partition estimate of preimage lengths. It includes smooth and step functions, the improper integral of `1/√x`, `sin(x)/x` extended continuously at zero, Thomae's function, and Dirichlet's non-Riemann-integrable function. The page explicitly warns that a regular finite sample grid can miss measure-zero structure and explains the limitations of the sampled Lebesgue-inspired approximation.
+
+Exercise 2 computes the standard normal CDF with composite Simpson integration, the integrated Gaussian power series, and an Abramowitz–Stegun erf approximation. It compares values with NIST's five-decimal standard-normal table, times the methods in the visitor's browser, derives the exact erf representation, and explains the Liouville-theorem reason that the CDF is not elementary. The report is [HW6-REPORT.md](HW6-REPORT.md).
+
+The public page is [Course Homework 5: Integration and the normal CDF](https://fidanmamedlii.github.io/statistics-homework-2026/homework-6.html).
 
 ## Verification
 

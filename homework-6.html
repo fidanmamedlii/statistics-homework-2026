@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Compare Riemann and Lebesgue-inspired numerical integration, then compute the standard normal CDF with Simpson's rule, an erf series, and a fast erf approximation.">
+  <title>Course Homework 5 — Integration &amp; the Normal CDF</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .hw6-hero{padding:48px 0 32px;border-bottom:1px solid var(--line)}
+    .hw6-hero h1{font-size:clamp(38px,5.6vw,64px);margin:10px 0 15px}
+    .hw6-jumps{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0}
+    .hw6-jumps a{padding:6px 10px;border:1px solid var(--line);border-radius:20px;text-decoration:none;font-size:12px;color:var(--teal-deep);background:#fff}
+    .hw6-intro-grid,.hw6-method-grid,.hw6-compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
+    .hw6-card{background:#fff;border:1px solid var(--line);border-radius:5px;padding:18px;min-width:0}
+    .hw6-card h3{font-size:18px;margin:0 0 8px}
+    .hw6-card p{font-size:13px;color:#475956;margin:7px 0}
+    .hw6-card .formula-card{margin:10px 0}
+    .hw6-strip{height:48px;margin:14px 0 4px;display:flex;align-items:stretch;border:1px solid var(--line);background:#f6f8f4;overflow:hidden}
+    .hw6-strip span{display:grid;place-items:center;font:10px var(--mono);color:#fff;border-right:1px solid rgba(255,255,255,.5)}
+    .hw6-strip.domain span:nth-child(odd){background:#187766}.hw6-strip.domain span:nth-child(even){background:#68a999}
+    .hw6-strip.range{height:68px;display:block;position:relative;background:linear-gradient(to top,#e6f3ed 0 30%,#b9e3d3 30% 60%,#71b9a3 60% 78%,#267e6c 78% 100%)}
+    .hw6-strip.range:before,.hw6-strip.range:after{position:absolute;left:6px;right:6px;font:10px var(--mono);color:#24483e}
+    .hw6-strip.range:before{content:'high function values';top:5px}.hw6-strip.range:after{content:'low function values';bottom:4px}
+    .hw6-controls{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:18px 0}
+    .hw6-controls .field{min-width:140px}.hw6-controls input,.hw6-controls select{width:100%}
+    .hw6-status{min-height:24px;font-size:13px;font-weight:600;color:var(--teal-deep)}
+    .hw6-status.error{color:#a33c27}
+    .hw6-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+    .hw6-metric{padding:13px;background:#fff;border:1px solid var(--line);border-radius:4px;min-width:0}
+    .hw6-metric span{display:block;color:var(--muted);font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+    .hw6-metric strong{display:block;font:600 21px var(--display);margin:5px 0;overflow-wrap:anywhere}
+    .hw6-metric small{font-size:11px;color:var(--muted)}
+    .hw6-table{width:100%;border-collapse:collapse;font-size:12px}
+    .hw6-table th,.hw6-table td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+    .hw6-table th{font:10px var(--mono);background:#f4f7f3;letter-spacing:.04em;position:sticky;top:0}
+    .hw6-table tr:last-child td{border-bottom:0}
+    .hw6-table tr.highlight td{background:#eaf5ef}
+    .hw6-scroll{overflow:auto;border:1px solid var(--line);border-radius:3px;max-height:340px}
+    .hw6-plot{background:#fff;border:1px solid var(--line);border-radius:5px;padding:14px;min-width:0}
+    .hw6-plot h3{font-size:18px;margin:0 0 7px}.hw6-plot p{font-size:12px;color:var(--muted);margin:0 0 9px}
+    .hw6-plot canvas{width:100%;height:255px;display:block}
+    .hw6-equation{font:13px var(--mono);padding:12px 14px;background:#eff4ef;border-radius:3px;overflow-wrap:anywhere;color:#294b41;margin:12px 0}
+    .hw6-warning{background:#fbede2;border-left:3px solid #c97743;padding:13px 15px;color:#523b2e;font-size:13px;margin:15px 0}
+    .hw6-good{background:#e5f4ee;border-left:3px solid var(--teal-deep);padding:13px 15px;color:#24483e;font-size:13px;margin:15px 0}
+    .hw6-ref li{margin:7px 0;font-size:13px}.hw6-ref a{color:var(--teal-deep)}
+    .hw6-kicker{font:500 10px var(--mono);letter-spacing:.14em;color:var(--teal-deep);margin:0 0 8px}
+    .hw6-result{font:500 13px var(--mono);color:#294b41}
+    .hw6-benchmark{min-height:24px;color:var(--muted);font-size:12px}
+    .hw6-muted{color:var(--muted);font-size:12px}
+    .hw6-mini-list{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0}
+    .hw6-mini-list article{background:#f4f7f3;border-radius:3px;padding:11px;font-size:12px;color:#475956}
+    .hw6-mini-list strong{display:block;color:var(--ink);font-size:12px;margin-bottom:4px}
+    @media(max-width:850px){.hw6-intro-grid,.hw6-method-grid,.hw6-compare-grid{grid-template-columns:1fr}.hw6-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:560px){.hw6-metrics,.hw6-mini-list{grid-template-columns:1fr}.hw6-plot{padding:10px}.hw6-plot canvas{height:225px}.hw6-table{font-size:11px}}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark">∑</span><span>CRYPTOGRAPHY <i>&amp;</i> STATISTICS</span></a>
+    <nav aria-label="Homework navigation"><a href="homework-1.html">Homework 01</a><a href="homework-2.html">Homework 02</a><a href="homework-3.html">Homework 03</a><a href="homework-4.html">Homework 04</a><a href="homework-5.html">Homework 05</a><a href="homework-6.html" aria-current="page">Homework 06</a></nav>
+  </header>
+  <main>
+    <section class="hw6-hero">
+      <div class="crumb"><a href="index.html">HOME</a> / INTEGRATION · NORMAL PROBABILITY</div>
+      <p class="eyebrow">COURSE HOMEWORK 05 · SITE PAGE 06 · TWO NUMERICAL LABS</p>
+      <h1>Two ways to measure area.<br><span style="color:var(--teal-deep)">One bell curve.</span></h1>
+      <p class="lead">Split the input interval into little pieces, or split the function’s possible heights into levels. Then use those ideas to compute the standard normal cumulative probability.</p>
+      <nav class="hw6-jumps" aria-label="Homework sections"><a href="#integration">Exercise 1 · Integration</a><a href="#cdf">Exercise 2 · Normal CDF</a><a href="#liouville">Why erf is needed</a><a href="#coverage">Checklist &amp; sources</a></nav>
+    </section>
+
+    <section class="section" id="integration">
+      <p class="hw6-kicker">EXERCISE 1 · RIEMANN AND LEBESGUE INTEGRATION</p>
+      <h2>Two viewpoints on the same area</h2>
+      <p>An integral adds up area. The two definitions organize that addition differently.</p>
+      <div class="hw6-intro-grid">
+        <article class="hw6-card"><h3>Riemann: cut the x-axis</h3><p>Divide the input interval into narrow pieces. Sample the function in each piece, then add each height times its piece width.</p><div class="hw6-strip domain" aria-hidden="true"><span style="flex:1">Δx</span><span style="flex:1">Δx</span><span style="flex:1">Δx</span><span style="flex:1">Δx</span><span style="flex:1">Δx</span><span style="flex:1">Δx</span></div><div class="hw6-equation">R<sub>N</sub> = Δx · Σ f(x<sub>i</sub><sup>*</sup>)</div><p>Here the sample is the middle of each interval. For a smooth curve, narrower slices usually improve the estimate.</p></article>
+        <article class="hw6-card"><h3>Lebesgue: cut the y-axis</h3><p>Group input points by the height their function reaches. For each height band, estimate how much input length lands in that band, then add height × length.</p><div class="hw6-strip range" aria-hidden="true"></div><div class="hw6-equation">∫ f ≈ Σ (height level) · (length of its preimage)</div><p>A <em>preimage</em> is the set of x-values whose outputs fall in a chosen band. In this demo, its length is estimated by counting sample points.</p></article>
+      </div>
+      <div class="hw6-good"><strong>Important:</strong> this is a finite, Lebesgue-inspired approximation. The true Lebesgue definition uses the measure (length) of each preimage set. The program estimates those lengths from sampled x-values, so it is not an exact symbolic Lebesgue integral.</div>
+
+      <h3>Try the two approximations</h3>
+      <p>Select a function, then change the number of x-samples and the number of output-height bands. The table gives the reference integral and shows how far each estimate is from it.</p>
+      <div class="hw6-controls">
+        <div class="field"><label for="function-choice">Function</label><select id="function-choice"><option value="sin">sin(x), 0 ≤ x ≤ π</option><option value="square">x², 0 ≤ x ≤ 1</option><option value="step13">1 then 3, split at 0.5</option><option value="absolute">|x − 0.5|</option><option value="inverse-root">1 / √x (improper)</option><option value="step10">1 then 0, split at 0.5</option><option value="sinc">sin(x) / x, with f(0) = 1</option><option value="dirichlet">Dirichlet: 1 on rationals, 0 otherwise</option><option value="thomae">Thomae: 1/q at reduced p/q, 0 on irrationals</option></select></div>
+        <div class="field"><label for="x-samples">Input samples (N)</label><input id="x-samples" type="number" min="8" max="100000" step="1" value="512"></div>
+        <div class="field"><label for="y-bins">Output bands (B)</label><input id="y-bins" type="number" min="2" max="300" step="1" value="40"></div>
+        <button class="button-small" id="compare-integrals">Compare estimates</button>
+      </div>
+      <p class="hw6-status" id="integration-status" role="status" aria-live="polite">Ready. Choose a function or press “Compare estimates”.</p>
+      <div class="hw6-metrics" aria-live="polite">
+        <article class="hw6-metric"><span>Reference integral</span><strong id="integral-reference">—</strong><small id="reference-kind">Exact or mathematical reference</small></article>
+        <article class="hw6-metric"><span>Riemann midpoint sum</span><strong id="riemann-result">—</strong><small id="riemann-error">Absolute error: —</small></article>
+        <article class="hw6-metric"><span>Range-band estimate</span><strong id="lebesgue-result">—</strong><small id="lebesgue-error">Absolute error: —</small></article>
+        <article class="hw6-metric"><span>Function evaluations</span><strong id="evaluation-count">—</strong><small id="operation-count">Both methods use the same sampled values</small></article>
+      </div>
+      <div class="hw6-compare-grid">
+        <article class="hw6-plot"><h3>Function samples</h3><p>Open circles mark sampled midpoint values. Pathological functions can make a regular sample grid misleading.</p><canvas id="function-plot" role="img" aria-label="Selected function and its midpoint samples"></canvas></article>
+        <article class="hw6-plot"><h3>Convergence as N grows</h3><p>Lebesgue-inspired results here use the current number of output bands B.</p><div class="hw6-scroll"><table class="hw6-table"><thead><tr><th>N</th><th>Riemann estimate</th><th>Riemann error</th><th>Range-band estimate</th><th>Range-band error</th></tr></thead><tbody id="convergence-rows"><tr><td colspan="5">Choose a function to populate this table.</td></tr></tbody></table></div></article>
+      </div>
+      <div class="hw6-method-grid">
+        <article class="hw6-card"><h3>What the examples show</h3><ul><li>For bounded Riemann-integrable functions, both approximations approach the same integral as the x-grid gets finer and the range bands get narrower.</li><li>A fixed number of range bands leaves a height-quantization error. More bands reduce that error, but add bookkeeping.</li><li>With the same N, midpoint Riemann needs about N function evaluations. The range method also bins each output and accumulates B counts: O(N + B).</li><li>If the preimage lengths are known exactly, a Lebesgue simple-function sum can be efficient. Estimating those preimages can be the hard part.</li></ul></article>
+        <article class="hw6-card"><h3>Special cases need care</h3><p><strong>1/√x:</strong> its range is unbounded, but its improper integral is finite (= 2). The demo uses a finite, sample-dependent top band; the tail is grouped into that last band, so its range estimate can be rough.</p><p><strong>sin(x)/x:</strong> the formula is undefined at x = 0. We define f(0) = 1 using its continuous limiting value; changing a single point does not change the integral.</p><p><strong>Thomae:</strong> the integral is 0, but a finite grid samples rational points with positive values. Those values shrink as the reduced denominators grow.</p></article>
+      </div>
+      <div class="hw6-warning"><strong>Pathological counterexample — Dirichlet’s function.</strong> It is 1 at rational x and 0 at irrational x. Its Lebesgue integral is 0 because the rationals have length zero. It is not Riemann-integrable: every interval contains both kinds of point, so the upper sum stays 1 and the lower sum stays 0. Every midpoint in our regular finite grid is rational, so both sampled estimators misleadingly report 1. This is a lesson about the limits of finite sampling, not a contradiction in integration theory.</div>
+    </section>
+
+    <section class="section" id="cdf">
+      <p class="hw6-kicker">EXERCISE 2 · NUMERICAL COMPUTATION OF THE NORMAL CDF</p>
+      <h2>How much of the bell curve lies to the left?</h2>
+      <p>For a standard normal value Z, the cumulative distribution function Φ(z) is the probability that Z is at most z. In area language, it is the area under the bell curve from the far left up to z.</p>
+      <div class="hw6-equation">Φ(z) = (1 / √(2π)) ∫<sub>−∞</sub><sup>z</sup> exp(−t² / 2) dt</div>
+      <p>For example, Φ(1) is about 0.8413: roughly 84 out of 100 standard-normal values are at or below 1. The table below compares three methods against the five-decimal values in NIST’s standard-normal table.</p>
+      <div class="hw6-controls">
+        <div class="field"><label for="simpson-panels">Simpson panels (even)</label><input id="simpson-panels" type="number" min="10" max="5000" step="2" value="200"></div>
+        <div class="field"><label for="cdf-z">Try a z-value (−8 to 8)</label><input id="cdf-z" type="number" min="-8" max="8" step="0.1" value="1"></div>
+        <button class="button-small" id="evaluate-cdf">Evaluate z</button>
+        <button class="button-small secondary" id="benchmark-cdf">Compare speed</button>
+      </div>
+      <p class="hw6-status" id="cdf-status" role="status" aria-live="polite">Using z = 1. Increase Simpson panels to see how integration changes.</p>
+      <div class="hw6-metrics" aria-live="polite">
+        <article class="hw6-metric"><span>Selected Φ(z)</span><strong id="selected-cdf">—</strong><small>Fast erf approximation</small></article>
+        <article class="hw6-metric"><span>Simpson’s rule</span><strong id="selected-simpson">—</strong><small id="simpson-detail">Composite rule</small></article>
+        <article class="hw6-metric"><span>Erf power series</span><strong id="selected-series">—</strong><small id="series-detail">Term-by-term integration, moderate z</small></article>
+        <article class="hw6-metric"><span>Reference at z = 1</span><strong>0.84134</strong><small>NIST table, rounded to 5 decimals</small></article>
+      </div>
+      <div class="hw6-compare-grid">
+        <article class="hw6-plot"><h3>The CDF curve</h3><p>The curve starts near 0, passes through 0.5 at z = 0, and approaches 1.</p><canvas id="cdf-plot" role="img" aria-label="Standard normal cumulative distribution function from z minus four to four"></canvas></article>
+        <article class="hw6-plot"><h3>Compare with the web reference</h3><p>The NIST table is rounded to five decimal places, so differences below roughly five millionths are smaller than its displayed precision.</p><div class="hw6-scroll"><table class="hw6-table"><thead><tr><th>z</th><th>NIST Φ(z)</th><th>Fast erf</th><th>Abs. table difference</th><th>Simpson</th><th>Series</th></tr></thead><tbody id="cdf-rows"></tbody></table></div></article>
+      </div>
+      <div class="hw6-method-grid">
+        <article class="hw6-card"><h3>Method A — Simpson’s numerical integration</h3><p>Use the normal curve’s symmetry: Φ(z) = 0.5 + sign(z) × ∫<sub>0</sub><sup>|z|</sup> φ(t)dt. Simpson’s rule estimates this finite integral by weighing endpoints, odd-indexed points by 4, and even-indexed points by 2.</p><div class="hw6-equation">∫<sub>a</sub><sup>b</sup>g(t)dt ≈ (h/3)[g₀ + gₘ + 4Σg<sub>odd</sub> + 2Σg<sub>even</sub>]</div><p>With M panels it takes O(M) function evaluations. More panels usually improve accuracy until rounding error becomes relevant.</p></article>
+        <article class="hw6-card"><h3>Method B — integrate the erf power series</h3><p>Expand exp(−t²/2) as a power series and integrate each term. This gives an infinite series for Φ(z), which the page sums until terms become tiny or a safety limit is reached.</p><div class="hw6-equation">Φ(z) = 1/2 + (1 / √(2π)) Σ<sub>k=0</sub><sup>∞</sup> [ (−1)<sup>k</sup> z<sup>2k+1</sup> / (2<sup>k</sup> k! (2k+1)) ]</div><p>It is accurate for moderate z, but terms can become large and cancel for large |z|. The input is capped at |z| ≤ 8; the page suppresses the direct series beyond |z| = 4 and explains why.</p></article>
+        <article class="hw6-card"><h3>Method C — a fast erf approximation</h3><p>The error function packages a Gaussian integral. The page uses the compact Abramowitz–Stegun 7.1.26 approximation, requiring a fixed number of arithmetic operations and one exponential evaluation.</p><div class="hw6-equation">Φ(z) = ½ [1 + erf(z / √2)]</div><p>This is O(1) work per query. The comparison table shows its difference from NIST’s rounded reference at each listed z.</p></article>
+        <article class="hw6-card"><h3>What the speed comparison means</h3><p>Click <strong>Compare speed</strong> to time repeated calls in this browser. Simpson spends work proportional to its panel count; the series spends work proportional to the number of terms; the erf approximation uses a fixed short formula.</p><p>Browser timing is only a rough, machine-dependent comparison. It does not replace the accuracy check, and an optimized math library may use a different algorithm.</p><p id="cdf-benchmark" class="hw6-benchmark" aria-live="polite">No timing run yet.</p></article>
+      </div>
+    </section>
+
+    <section class="section" id="liouville">
+      <p class="hw6-kicker">WHY A SPECIAL FUNCTION APPEARS</p>
+      <h2>Liouville’s theorem, erf, and numerical answers</h2>
+      <p>Elementary functions include familiar finite combinations of powers, roots, exponentials, logarithms, and trigonometric functions. The normal density contains exp(−x²/2). Liouville’s theorem from differential algebra gives a way to prove that its antiderivative cannot be written using only elementary functions.</p>
+      <details><summary>A short look at how Liouville’s theorem applies</summary><p>A standard consequence of the theorem says that an elementary antiderivative of <code>exp(−x²)</code> would require a rational function <code>R(x)</code> satisfying <code>R′(x) − 2xR(x) = 1</code>, because the derivative of <code>R(x)exp(−x²)</code> is <code>(R′ − 2xR)exp(−x²)</code>. A rational function with a finite pole cannot solve this equation: its derivative would have a stronger pole that the other term cannot cancel. So <code>R</code> would have to be a polynomial. But if <code>R</code> is a nonzero polynomial, <code>−2xR</code> has degree one higher than <code>R′</code>, so their sum cannot equal the constant 1. Therefore no such rational function exists, and the Gaussian integral is not elementary. The normal density reduces to this same integral by rescaling x.</p></details>
+      <p>That does <em>not</em> mean the probability is unknown or impossible to calculate. Mathematicians give the needed integral a name: the error function.</p>
+      <div class="hw6-equation">erf(u) = (2 / √π) ∫<sub>0</sub><sup>u</sup> exp(−t²)dt<br>Φ(z) = ½ [1 + erf(z / √2)]</div>
+      <p>This is an exact analytical representation in terms of a special function. It is not an elementary antiderivative. To get a decimal such as 0.84134, a computer still needs a numerical algorithm, a table, or a built-in implementation of erf.</p>
+      <div class="hw6-good"><strong>Takeaway:</strong> the three CDF methods should agree to the precision they can support. Simpson improves by adding panels, the series improves by adding terms (until cancellation becomes a problem), and the fast erf formula trades a tiny approximation error for a small, predictable amount of work.</div>
+    </section>
+
+    <section class="section" id="coverage">
+      <p class="hw6-kicker">ASSIGNMENT CHECKLIST &amp; REFERENCES</p>
+      <h2>Every requested part is covered</h2>
+      <ul>
+        <li>Compares domain-partition midpoint sums with a range-partition simple-function estimate across smooth, step, improper, and pathological examples.</li>
+        <li>Shows convergence as the number of input samples changes; discusses accuracy, function-evaluation cost, range-band error, and when both methods approach the same value.</li>
+        <li>Explains Dirichlet’s non-Riemann-integrability, its Lebesgue integral, and why a rational midpoint grid gives a misleading finite estimate; includes Thomae’s function.</li>
+        <li>Implements Simpson integration, the integrated Gaussian power series, and an erf approximation for the standard normal CDF.</li>
+        <li>Compares several CDF values against a trusted NIST standard-normal reference and includes a browser timing comparison.</li>
+        <li>Explains the role of Liouville’s theorem, the exact erf representation, and why decimal computation still needs numerical methods.</li>
+      </ul>
+      <ol class="hw6-ref">
+        <li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda3671.htm" target="_blank" rel="noreferrer">NIST/SEMATECH Engineering Statistics Handbook — standard normal cumulative table</a>. The reference column uses its five-decimal values.</li>
+        <li><a href="https://dlmf.nist.gov/7.2" target="_blank" rel="noreferrer">NIST Digital Library of Mathematical Functions, §7.2</a> — definitions of erf and erfc.</li>
+        <li><a href="https://math.stanford.edu/~conrad/papers/elemint.pdf" target="_blank" rel="noreferrer">Keith Conrad, “Impossibility theorems for elementary integration”</a> — Liouville’s theorem and the Gaussian integral example.</li>
+        <li><a href="https://faculty.etsu.edu/gardnerr/4047/notes-Hogg-McKean-Craig/Hogg-McKean-Craig-3-4.pdf" target="_blank" rel="noreferrer">Hogg, McKean &amp; Craig, Section 3.4: The Normal Distribution</a> — the course reference supplied with the assignment.</li>
+        <li><a href="https://gsl.ampl.com/ref/erf.html" target="_blank" rel="noreferrer">GNU Scientific Library erf documentation</a> — error function definitions and references to Abramowitz &amp; Stegun.</li>
+      </ol>
+      <p class="hw6-muted">The sampled range method is intentionally labeled “Lebesgue-inspired”: estimating preimage measures with finite midpoint counts can miss measure-zero structure, as Dirichlet’s example demonstrates.</p>
+    </section>
+  </main>
+  <footer><span>CRYPTOGRAPHY &amp; STATISTICS</span><span>Course Homework 05 · Integration and the normal CDF</span></footer>
+  <script src="homework-6.js"></script>
+</body>
+</html>
