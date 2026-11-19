@@ -8,6 +8,7 @@ This buildless static site contains six interactive learning pages. The first tw
 - `homework-4.html` — interactive Bernoulli/Rademacher penetration-score experiment with multiple systems and attackers, empirical distributions, LLN checks, and CLT comparisons. Its scripts are `homework-4-core.js` (simulation) and `homework-4.js` (interface and charts).
 - `homework-5.html` — Welford’s mean and sample-variance recurrence plus an interactive sampling experiment. Its scripts are `homework-5-core.js` and `homework-5.js`.
 - `homework-6.html` — course Homework 5: Riemann and Lebesgue-inspired numerical integration, pathological examples, and standard-normal CDF methods. Its script is `homework-6.js`.
+- `homework-7.html` — course Homework 6: programmatically constructed contingency tables, marginal and conditional frequencies, expected counts, Pearson's chi-square test, p-value, effect size, and interpretation cautions. Its script is `homework-7.js`.
 
 The mod-17 curve and restricted secp256k1 key range are intentionally insecure teaching examples and must not be used to protect assets. The demos run in the browser; no mnemonic or real wallet secret is collected or processed. Homework 03 uses the browser's built-in Web Crypto API and no external JavaScript packages.
 
@@ -47,6 +48,10 @@ The sixth site page covers the course's fifth homework because course Homework 1
 Exercise 2 computes the standard normal CDF with composite Simpson integration, the integrated Gaussian power series, and an Abramowitz–Stegun erf approximation. It compares values with NIST's five-decimal standard-normal table, times the methods in the visitor's browser, derives the exact erf representation, and explains the Liouville-theorem reason that the CDF is not elementary. The report is [HW6-REPORT.md](HW6-REPORT.md).
 
 The public page is [Course Homework 5: Integration and the normal CDF](https://fidanmamedlii.github.io/statistics-homework-2026/homework-6.html).
+
+## Course Homework 6: Statistical independence
+
+The seventh site page accepts paired categorical observations, builds the contingency table from raw records, and computes marginal frequencies, both directions of conditional frequencies, expected counts under independence, Pearson's chi-square statistic, the degrees of freedom, its p-value, and Cramér's V. It includes independent, associated, and weak-evidence synthetic examples, an editable data input, a conditional-frequency chart, small-expected-count warnings, and plain-language notes distinguishing association from causation. Its public page is [Course Homework 6: Statistical independence](https://fidanmamedlii.github.io/statistics-homework-2026/homework-7.html).
 
 ## Verification
 

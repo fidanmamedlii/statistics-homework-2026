@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Build a contingency table from paired categorical data, compare observed and expected counts, and explore the chi-square test of independence.">
+  <title>Course Homework 6 — Statistical Independence</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .hw7-hero{padding:46px 0 30px;border-bottom:1px solid var(--line)}
+    .hw7-hero h1{font-size:clamp(38px,5.4vw,62px);margin:9px 0 14px}
+    .hw7-section{padding:28px 0;border-bottom:1px solid var(--line)}
+    .hw7-section h2{font-size:28px;margin:0 0 12px}
+    .hw7-section h3{font-size:18px;margin:0 0 8px}
+    .hw7-section p,.hw7-section li{font-size:14px;color:#475956}
+    .hw7-section p{margin:8px 0}
+    .hw7-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:16px;margin:18px 0}
+    .hw7-card{background:#fff;border:1px solid var(--line);border-radius:5px;padding:18px;min-width:0}
+    .hw7-controls{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:14px 0}
+    .hw7-controls .field{min-width:160px}
+    .hw7-controls select{width:100%}
+    .hw7-controls .button-small{min-height:40px}
+    .hw7-status{min-height:24px;color:var(--teal-deep);font-size:13px;font-weight:600}
+    .hw7-status.error{color:#9a3e2d}
+    .hw7-data-box{margin:14px 0;padding:13px;background:#f5f8f4;border:1px solid var(--line);border-radius:4px}
+    .hw7-data-box summary{cursor:pointer;font-weight:700;font-size:14px}
+    .hw7-data-box textarea{display:block;width:100%;min-height:150px;margin:12px 0 8px;resize:vertical;font:13px/1.5 var(--mono);border:1px solid var(--line);padding:10px;border-radius:3px}
+    .hw7-checkbox{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+    .hw7-checkbox input{width:auto}
+    .hw7-hint{font-size:12px!important;color:var(--muted)!important}
+    .hw7-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:16px 0}
+    .hw7-metric{background:#fff;border:1px solid var(--line);border-radius:4px;padding:12px;min-width:0}
+    .hw7-metric span{display:block;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+    .hw7-metric strong{display:block;font:600 21px var(--display);margin:5px 0;overflow-wrap:anywhere}
+    .hw7-metric small{font-size:11px;color:var(--muted)}
+    .hw7-table-scroll{overflow:auto;border:1px solid var(--line);border-radius:3px;max-height:360px}
+    .hw7-table{width:100%;border-collapse:collapse;font-size:12px}
+    .hw7-table th,.hw7-table td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+    .hw7-table th{font:10px var(--mono);letter-spacing:.03em;background:#f4f7f3;position:sticky;top:0;z-index:1}
+    .hw7-table th:first-child,.hw7-table td:first-child{text-align:left;position:sticky;left:0;background:#f8faf7;z-index:2}
+    .hw7-table tfoot th,.hw7-table tfoot td{font-weight:700;background:#eef4ef}
+    .hw7-cell-observed{display:block;font:600 14px var(--display);color:var(--ink)}
+    .hw7-cell-expected{display:block;font:10px var(--mono);color:var(--muted);margin-top:2px}
+    .hw7-two-tables{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+    .hw7-note{padding:13px 15px;border-left:3px solid var(--teal-deep);background:#e8f4ee;color:#284a41;font-size:13px;margin:14px 0}
+    .hw7-warning{padding:13px 15px;border-left:3px solid #c97743;background:#fbede2;color:#523b2e;font-size:13px;margin:14px 0}
+    .hw7-decision{padding:16px 18px;border-radius:4px;background:#e8f4ee;border:1px solid #cbe3d7;margin:12px 0}
+    .hw7-decision.warn{background:#fbede2;border-color:#efd0b7}
+    .hw7-decision strong{display:block;font:600 18px var(--display);margin-bottom:3px}
+    .hw7-bars{display:grid;gap:10px;margin-top:14px}
+    .hw7-bar-row{display:grid;grid-template-columns:minmax(100px,150px) 1fr;gap:12px;align-items:center;font-size:12px}
+    .hw7-bar-label{font-weight:700;overflow-wrap:anywhere}
+    .hw7-bar{display:flex;min-height:30px;overflow:hidden;border-radius:3px;background:#edf1ed}
+    .hw7-segment{display:flex;align-items:center;justify-content:center;min-width:0;color:#173a33;font:11px var(--mono);border-right:1px solid rgba(255,255,255,.8);overflow:hidden}
+    .hw7-legend{display:flex;flex-wrap:wrap;gap:9px 15px;margin:10px 0;font-size:12px;color:var(--muted)}
+    .hw7-legend span{display:inline-flex;align-items:center;gap:6px}
+    .hw7-swatch{width:11px;height:11px;border-radius:2px;display:inline-block}
+    .hw7-formula{font:13px/1.65 var(--mono);padding:12px 14px;background:#eff4ef;border-radius:3px;overflow-wrap:anywhere;color:#294b41;margin:12px 0}
+    .hw7-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:15px 0}
+    .hw7-step{background:#fff;border-top:2px solid var(--teal-deep);padding:13px}
+    .hw7-step b{display:block;font-size:13px;margin-bottom:4px}
+    .hw7-step p{font-size:12px;margin:0}
+    .hw7-ref li{margin:7px 0;font-size:13px}
+    .hw7-ref a{color:var(--teal-deep);overflow-wrap:anywhere}
+    .hw7-example{font:12px/1.6 var(--mono);padding:11px;background:#f5f8f4;border-radius:3px;overflow-wrap:anywhere}
+    @media(max-width:900px){.hw7-layout{grid-template-columns:1fr}.hw7-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:650px){.hw7-two-tables{grid-template-columns:1fr}.hw7-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.hw7-steps{grid-template-columns:1fr}.hw7-bar-row{grid-template-columns:1fr;gap:5px}.hw7-table{font-size:11px}}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark">∑</span><span>CRYPTOGRAPHY <i>&amp;</i> STATISTICS</span></a>
+    <nav aria-label="Homework navigation"><a href="homework-1.html">Homework 01</a><a href="homework-2.html">Homework 02</a><a href="homework-3.html">Homework 03</a><a href="homework-4.html">Homework 04</a><a href="homework-5.html">Homework 05</a><a href="homework-6.html">Course HW 05</a><a href="homework-7.html" aria-current="page">Course HW 06</a></nav>
+  </header>
+  <main>
+    <section class="hw7-hero">
+      <div class="crumb"><a href="index.html">HOME</a> / CONTINGENCY TABLES · CHI-SQUARE</div>
+      <p class="eyebrow">COURSE HOMEWORK 06 · STATISTICAL INDEPENDENCE</p>
+      <h1>Do these two<br><span style="color:var(--teal-deep)">categories travel together?</span></h1>
+      <p class="lead">Start with paired observations. The program counts every combination, compares what happened with what independence predicts, and helps you interpret the chi-square result without confusing association with cause.</p>
+    </section>
+
+    <section class="hw7-section" id="lab">
+      <p class="eyebrow">INTERACTIVE LAB · TWO CATEGORICAL VARIABLES</p>
+      <h2>Build and analyze a contingency table</h2>
+      <p>Each line in the dataset is one observed pair: a value of <strong>X</strong> and a value of <strong>F</strong>. For example, one employee could be “Training” and “Clicked.” The table counts how many observations fall into each pair.</p>
+      <div class="hw7-layout">
+        <article class="hw7-card">
+          <h3>Choose a ready example</h3>
+          <div class="hw7-controls">
+            <div class="field"><label for="demo-select">Synthetic dataset</label><select id="demo-select"><option value="training">Phishing training and click outcome · associated</option><option value="independent">Department and MFA use · independent pattern</option><option value="weak">Small sample · weak evidence</option></select></div>
+            <div class="field"><label for="alpha-select">Significance level α</label><select id="alpha-select"><option value="0.05" selected>0.05</option><option value="0.01">0.01</option><option value="0.10">0.10</option></select></div>
+          </div>
+          <p class="hw7-status" id="dataset-description" role="status" aria-live="polite"></p>
+          <details class="hw7-data-box">
+            <summary>Use your own paired data</summary>
+            <p class="hw7-hint">Paste one observation per line, with two category values separated by a tab, comma, or semicolon. A header row is optional. Category names must not contain the separator you use.</p>
+            <textarea id="custom-data" spellcheck="false" aria-label="Paste paired categorical observations" placeholder="Training,Clicked&#10;Training,Did not click&#10;No training,Clicked"></textarea>
+            <label class="hw7-checkbox"><input id="has-header" type="checkbox"> The first non-empty line is a header row</label>
+            <div class="hw7-controls"><button class="button-small" id="analyze-custom">Analyze my data</button><button class="button-small secondary" id="restore-demo">Return to selected example</button></div>
+          </details>
+        </article>
+        <article class="hw7-card">
+          <h3>What the test is asking</h3>
+          <p><strong>H₀:</strong> X and F are independent in the population. Knowing X does not change the probabilities of F.</p>
+          <p><strong>H₁:</strong> the variables are associated; the distribution of F differs across values of X.</p>
+          <p>The test compares observed cell counts with expected counts under H₀. A large gap across cells produces a large χ² statistic.</p>
+          <div class="hw7-formula">Expected count Eᵢⱼ = (row totalᵢ × column totalⱼ) / N<br>χ² = Σ (Oᵢⱼ − Eᵢⱼ)² / Eᵢⱼ<br>degrees of freedom = (rows − 1)(columns − 1)</div>
+          <p class="hw7-hint">O means observed. N is the total number of paired observations.</p>
+        </article>
+      </div>
+      <p class="hw7-status" id="lab-status" role="status" aria-live="polite"></p>
+
+      <div class="hw7-metrics" aria-live="polite">
+        <article class="hw7-metric"><span>Observations N</span><strong id="metric-n">—</strong><small>paired records used</small></article>
+        <article class="hw7-metric"><span>Pearson χ²</span><strong id="metric-chi">—</strong><small>sum of cell contributions</small></article>
+        <article class="hw7-metric"><span>Degrees of freedom</span><strong id="metric-df">—</strong><small>(r−1)(c−1)</small></article>
+        <article class="hw7-metric"><span>p-value</span><strong id="metric-p">—</strong><small>upper-tail probability under H₀</small></article>
+        <article class="hw7-metric"><span>Cramér’s V</span><strong id="metric-v">—</strong><small>association size, 0 to 1</small></article>
+      </div>
+      <div id="decision" class="hw7-decision" aria-live="polite"><strong>Choose a dataset</strong><span>Results will appear here.</span></div>
+      <div id="expected-warning" class="hw7-warning" hidden></div>
+
+      <div class="hw7-card">
+        <h3>Observed and expected counts</h3>
+        <p class="hw7-hint">Each cell shows the observed count <strong>O</strong> and the expected count <strong>E</strong> in parentheses. Row and column totals also show marginal frequencies.</p>
+        <div class="hw7-table-scroll"><table class="hw7-table" id="observed-table"><caption class="visually-hidden">Observed counts and expected counts under independence</caption><tbody></tbody></table></div>
+      </div>
+
+      <div class="hw7-two-tables">
+        <article class="hw7-card"><h3>Row-conditional frequencies: P(F | X)</h3><p class="hw7-hint">Within each X group, what share falls in each F category?</p><div class="hw7-table-scroll"><table class="hw7-table" id="row-conditional"><caption class="visually-hidden">Conditional frequencies of F given X</caption><tbody></tbody></table></div></article>
+        <article class="hw7-card"><h3>Column-conditional frequencies: P(X | F)</h3><p class="hw7-hint">Within each F group, what share falls in each X category?</p><div class="hw7-table-scroll"><table class="hw7-table" id="column-conditional"><caption class="visually-hidden">Conditional frequencies of X given F</caption><tbody></tbody></table></div></article>
+      </div>
+
+      <article class="hw7-card" style="margin-top:16px">
+        <h3>Compare F percentages inside each X group</h3>
+        <p class="hw7-hint">If the colors have about the same proportions across rows, the conditional distributions look more alike. The chart is descriptive; the chi-square test accounts for sample size.</p>
+        <div class="hw7-legend" id="legend"></div><div class="hw7-bars" id="conditional-bars"></div>
+      </article>
+    </section>
+
+    <section class="hw7-section" id="interpret">
+      <p class="eyebrow">HOW TO READ IT · WITHOUT OVERCLAIMING</p>
+      <h2>From counts to a careful conclusion</h2>
+      <div class="hw7-steps">
+        <article class="hw7-step"><b>1 · Marginal frequencies</b><p>Count each category on its own. Row totals describe X; column totals describe F. Divide a total by N to get its marginal proportion.</p></article>
+        <article class="hw7-step"><b>2 · Conditional frequencies</b><p>Hold one category fixed. For P(F | X), divide a cell by its row total. For P(X | F), divide by its column total.</p></article>
+        <article class="hw7-step"><b>3 · Independence check</b><p>Use the margins to calculate expected counts if the variables were independent, then compare those with observed counts through χ².</p></article>
+      </div>
+      <div class="hw7-layout">
+        <article class="hw7-card">
+          <h3>A small worked example</h3>
+          <p>In the phishing-training demo, 60 trained people include 8 clickers and 52 non-clickers. Overall, 36 of 120 people clicked and 84 did not.</p>
+          <div class="hw7-example">Expected trained-and-clicked = 60 × 36 / 120 = 18<br>Expected trained-and-not-clicked = 60 × 84 / 120 = 42<br>Observed trained-and-clicked = 8, so its χ² contribution is (8 − 18)² / 18 ≈ 5.56</div>
+          <p>Repeat the same calculation for every cell and add the contributions. One cell’s difference is not the whole test.</p>
+        </article>
+        <article class="hw7-card">
+          <h3>What a p-value does—and does not—say</h3>
+          <p>A small p-value means the observed table would be unusual if independence and the test assumptions were true. At the chosen α, it can be evidence against H₀.</p>
+          <p>It is <strong>not</strong> the probability that H₀ is true, and a large p-value does not prove independence. Report the table, effect size, p-value, and study context.</p>
+          <p>Cramér’s V helps describe association strength. Statistical significance and practical importance are different questions.</p>
+        </article>
+      </div>
+      <div class="hw7-warning"><strong>Association is not causation.</strong> If two categories are associated, this table alone cannot show that changing X causes F. A third factor could affect both, or the direction could be reversed. Causal claims need an appropriate study design and subject-matter reasoning.</div>
+      <div class="hw7-note"><strong>Assumptions and small counts.</strong> Each record should be an independent observation, categories should be mutually exclusive, and the table should contain counts. The chi-square p-value is an approximation. This page warns when expected counts are small; for a sparse 2×2 table, consider an exact method such as Fisher’s exact test or collect more data. Do not combine categories unless the combination makes sense before looking at the result.</div>
+    </section>
+
+    <section class="hw7-section" id="sources">
+      <p class="eyebrow">REFERENCES</p>
+      <h2>Where the formulas and cautions come from</h2>
+      <ul class="hw7-ref">
+        <li>NIST/SEMATECH, <a href="https://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/chistest.htm" target="_blank" rel="noopener">Chi-Square Independence Test</a> — hypotheses, expected counts, statistic, degrees of freedom, and guidance on small expected counts.</li>
+        <li>SciPy documentation, <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chi2_contingency.html" target="_blank" rel="noopener">chi2_contingency</a> — a reference implementation for contingency tables and p-values.</li>
+        <li>American Statistical Association, <a href="https://www.amstat.org/asa/files/pdfs/p-valuestatement.pdf" target="_blank" rel="noopener">Statement on Statistical Significance and P-Values</a> — common interpretation limits of p-values.</li>
+        <li>NIST/SEMATECH, <a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda33q.htm" target="_blank" rel="noopener">Scatter Plots</a> — association does not establish causality.</li>
+      </ul>
+    </section>
+  </main>
+  <footer><span>CRYPTOGRAPHY &amp; STATISTICS</span><span>Course Homework 06 · Statistical independence</span></footer>
+  <script src="homework-7.js"></script>
+</body>
+</html>
